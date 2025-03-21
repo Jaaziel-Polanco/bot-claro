@@ -47,9 +47,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }, 2000);
     };
 
+    // En tu archivo useChatStore.tsx
     const handleUserQuery = async (query: string) => {
         addMessage({ type: 'user', text: query });
-        addMessage({ type: 'bot', text: "..." }); // Mensaje de carga
+        const processingMessage = addMessage({ type: 'bot', text: "Procesando..." });
 
         try {
             const response = await fetch('/api/chat', {
@@ -59,30 +60,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             });
             const data = await response.json();
 
-            // Si el score es muy bajo o el intent no es claro, se abre modal para que el usuario seleccione.
-            if (data.score < 0.3) {
-                // Reemplaza el mensaje de carga por un mensaje que indique ambigüedad.
-                setMessages(prev => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = {
-                        type: 'bot',
-                        text: "No estoy seguro de haber entendido correctamente. ¿Podrías seleccionar la opción que mejor se adapte a tu consulta?"
-                    };
-                    return newMessages;
-                });
-                // Aquí se podría abrir un modal para mostrar todas las opciones (usa getFilteredIntents)
-                // Por ejemplo: setModalOpen(true);
-            } else {
-                setMessages(prev => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = {
-                        type: 'bot',
-                        text: data.answer || "Lo siento, no entendí tu pregunta."
-                    };
-                    return newMessages;
-                });
-            }
-        } catch (error) {
+            // Reemplaza el mensaje de procesamiento
+            setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = {
+                    type: 'bot',
+                    text: data.answer || "No entendí tu mensaje."
+                };
+                return newMessages;
+            });
+        } catch {
             setMessages(prev => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {

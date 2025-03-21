@@ -1,134 +1,213 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Paper, Box, TextField, IconButton, Typography, Button } from '@mui/material';
 import { Send } from 'lucide-react';
 import Image from 'next/image';
 import { useChatStore } from '../store/useChatStore';
-import IntentsModal from './IntentsModal'; // Ajusta la ruta según tu estructura
+import IntentsModal from './IntentsModal';
 
 const ChatWidget: React.FC = () => {
-    const { messages, addMessage, selectIntent, getFilteredIntents } = useChatStore();
+    const { messages, addMessage, selectIntent, getFilteredIntents, handleUserQuery } = useChatStore();
     const [input, setInput] = useState<string>('');
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Agrega mensaje de bienvenida al inicio
     useEffect(() => {
         if (messages.length === 0) {
             addMessage({ type: 'bot', text: "¡Bienvenido al Chat de Soporte! ¿En qué puedo ayudarte hoy?" });
         }
     }, [messages, addMessage]);
 
-    // Scroll automático al final cuando se agregan mensajes
     useEffect(() => {
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages]);
 
-    // Filtra los intents según el input y muestra solo 4 inicialmente
     const filteredIntents = getFilteredIntents(input);
     const intentsToShow = filteredIntents.slice(0, 4);
 
     const handleSend = async () => {
         if (input.trim() === '') return;
-        addMessage({ type: 'user', text: input });
-        addMessage({ type: 'bot', text: "Procesando..." });
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: input })
-            });
-
-            const data = await response.json();
-            addMessage({ type: 'bot', text: data.answer || "No entendí tu mensaje." });
-        } catch {
-            addMessage({ type: 'bot', text: "Error en la conexión con el servicio de IA." });
-        }
-
+        await handleUserQuery(input); // Usamos la función del store que maneja el reemplazo
         setInput('');
+    };
+
+    // Animaciones
+    const titleVariants = {
+        initial: { opacity: 0, y: 20 },
+        animate: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                type: 'spring',
+                stiffness: 100,
+                damping: 20
+            }
+        }
+    };
+
+    const messageVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0 },
+        user: { opacity: 0, x: 20 }
     };
 
     return (
         <div className="flex flex-col items-center">
-            {/* Encabezado superior con logo y título */}
-            <Box className="mb-6 flex items-center gap-4">
-                <Image
-                    src="/image.png"
-                    alt="Logo Claro"
-                    width={48}
-                    height={48}
-                    className="object-contain"
-                />
-                <Typography variant="h4" className="text-[#E60000] font-extrabold drop-shadow-lg">
-                    Centro de Operaciones y Aprovisionamiento
-                </Typography>
-            </Box>
-
-            <Paper elevation={3} className="w-full max-w-md rounded-lg overflow-hidden">
-                {/* Header del Chat con fondo Claro */}
-                <Box className="bg-[#E60000] p-4 flex items-center gap-2">
-                    <Image
-                        src="/image.png"
-                        alt="Logo Claro"
-                        width={32}
-                        height={32}
-                        className="object-contain"
-                    />
-                    <Typography variant="h6" className="text-white font-semibold">
-                        Chat Soporte
-                    </Typography>
-                </Box>
-
-                {/* Área de mensajes */}
-                <Box className="p-4 h-80 overflow-y-auto">
-                    {messages.map((msg, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className={`mb-2 ${msg.type === 'user' ? 'text-right' : 'text-left'}`}
+            {/* Título animado con gradiente */}
+            <motion.div
+                initial="initial"
+                animate="animate"
+                variants={titleVariants}
+                className="mb-6"
+            >
+                <Box className="flex items-center gap-4">
+                    <motion.div
+                        whileHover={{
+                            scale: 1.1,
+                            rotate: [0, -5, 5, -5, 5, -5, 5, 0]
+                        }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <Image
+                            src="/image.png"
+                            alt="Logo Claro"
+                            width={94}
+                            height={94}
+                            className="object-contain"
+                        />
+                    </motion.div>
+                    <div className="bg-gradient-to-r from-[#E60000] to-[#FF6B6B] bg-clip-text text-transparent">
+                        <Typography
+                            variant="h4"
+                            className="font-bold text-3xl mt-1"
                         >
-                            <Box
-                                className={`inline-block px-4 py-2 rounded-lg ${msg.type === 'user'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-200 text-gray-800'
-                                    }`}
-                            >
-                                <Typography variant="body1" style={{ whiteSpace: 'pre-line' }}>
-                                    {msg.text}
-                                </Typography>
-                            </Box>
+                            Centro de Operaciones
+                            y Aprovisionamiento
+                        </Typography>
+                    </div>
+                </Box>
+            </motion.div>
+
+            <Paper
+                elevation={3}
+                component={motion.div}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl"
+            >
+                {/* Header del Chat con animación de hover */}
+                <motion.div whileHover={{ scale: 1.02 }}>
+                    <Box className="bg-gradient-to-r from-[#E60000] to-[#FF6B6B] p-4 flex items-center gap-2">
+                        <motion.div
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.6 }}
+                        >
+                            <Image
+                                src="/image.png"
+                                alt="Logo Claro"
+                                width={40}
+                                height={40}
+                                className="object-contain"
+                            />
                         </motion.div>
-                    ))}
-                    {/* Elemento para el scroll automático */}
+                        <Typography variant="h6" className="text-white font-bold text-lg">
+                            Asistente Virtual de Soporte
+                        </Typography>
+                    </Box>
+                </motion.div>
+
+                {/* Área de mensajes con animación escalonada */}
+                <Box className="p-4 h-80 overflow-y-auto bg-gray-50">
+                    <AnimatePresence>
+                        {messages.map((msg, index) => {
+                            const isProcessing = msg.text === "Procesando..." && index === messages.length - 1;
+
+                            return (
+                                <motion.div
+                                    key={index}
+                                    initial={msg.type === 'user' ? "user" : "hidden"}
+                                    animate="visible"
+                                    exit={{ opacity: 0 }}
+                                    variants={messageVariants}
+                                    transition={{ duration: 0.3 }}
+                                    className={`mb-3 ${msg.type === 'user' ? 'flex justify-end' : 'flex justify-start'}`}
+                                >
+                                    <motion.div
+                                        whileHover={{ scale: 1.02 }}
+                                        className={`max-w-[85%] px-4 py-2 rounded-2xl ${msg.type === 'user'
+                                            ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white'
+                                            : 'bg-white shadow-md'
+                                            }`}
+                                    >
+                                        {/* Solo muestra animación si es el último mensaje y está procesando */}
+                                        {isProcessing ? (
+                                            <motion.div
+                                                className="flex space-x-1"
+                                                animate={{ opacity: [0.4, 1, 0.4] }}
+                                                transition={{ repeat: Infinity, duration: 1.5 }}
+                                            >
+                                                <div className="w-2 h-2 bg-current rounded-full" />
+                                                <div className="w-2 h-2 bg-current rounded-full" />
+                                                <div className="w-2 h-2 bg-current rounded-full" />
+                                            </motion.div>
+                                        ) : (
+                                            <Typography variant="body1" className="leading-relaxed">
+                                                {msg.text}
+                                            </Typography>
+                                        )}
+                                    </motion.div>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
                     <div ref={messagesEndRef} />
                 </Box>
 
-                {/* Área de sugerencias y entrada */}
-                <Box className="p-4 border-t border-gray-300">
-                    <Box className="mb-2 flex flex-wrap gap-2">
+                {/* Área de interacción con animaciones */}
+                <Box className="p-4 border-t border-gray-200 bg-white">
+                    <motion.div layout className="mb-2 flex flex-wrap gap-2">
                         {intentsToShow.map((intent, idx) => (
-                            <Button key={idx} variant="outlined" size="small" onClick={() => selectIntent(intent)}>
-                                {intent.title}
-                            </Button>
+                            <motion.div
+                                key={idx}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => selectIntent(intent)}
+                                    className="rounded-full"
+                                >
+                                    {intent.title}
+                                </Button>
+                            </motion.div>
                         ))}
                         {filteredIntents.length > 4 && (
-                            <Button variant="outlined" size="small" onClick={() => setModalOpen(true)}>
-                                Ver más
-                            </Button>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                            >
+                                <Button
+                                    variant="text"
+                                    size="small"
+                                    onClick={() => setModalOpen(true)}
+                                    className="text-blue-600"
+                                >
+                                    Ver más opciones →
+                                </Button>
+                            </motion.div>
                         )}
-                    </Box>
-                    <Box className="flex">
+                    </motion.div>
+
+                    <motion.div layout className="flex items-center gap-2">
                         <TextField
                             fullWidth
                             variant="outlined"
                             size="small"
-                            placeholder="Escribe tu consulta en lenguaje natural..."
+                            placeholder="Escribe tu consulta..."
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={(e) => {
@@ -139,20 +218,33 @@ const ChatWidget: React.FC = () => {
                             }}
                             multiline
                             maxRows={4}
+                            className="rounded-2xl"
                         />
 
-                        <IconButton color="primary" onClick={handleSend}>
-                            <Send />
-                        </IconButton>
-                    </Box>
+                        <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <IconButton
+                                color="primary"
+                                onClick={handleSend}
+                                className="bg-blue-500 hover:bg-blue-600 text-white"
+                            >
+                                <Send size={20} />
+                            </IconButton>
+                        </motion.div>
+                    </motion.div>
                 </Box>
             </Paper>
 
-            {/* Modal para ver todos los intents */}
+            {/* Modal con animación */}
             <IntentsModal
                 open={modalOpen}
                 intents={filteredIntents}
-                onSelect={(intent) => selectIntent(intent)}
+                onSelect={(intent) => {
+                    selectIntent(intent);
+                    setModalOpen(false);
+                }}
                 onClose={() => setModalOpen(false)}
             />
         </div>
