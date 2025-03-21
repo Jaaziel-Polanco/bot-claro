@@ -6,8 +6,10 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Asegúrate de reemplazar las secuencias \n adecuadamente
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      // Remueve comillas externas y reemplaza \n por saltos de línea
+      privateKey: process.env.FIREBASE_PRIVATE_KEY
+        ? process.env.FIREBASE_PRIVATE_KEY.replace(/^"(.*)"$/, '$1').replace(/\\n/g, '\n')
+        : undefined,
     }),
     databaseURL: process.env.FIREBASE_DATABASE_URL,
   });
