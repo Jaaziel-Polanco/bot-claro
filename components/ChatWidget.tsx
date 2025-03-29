@@ -63,7 +63,7 @@ const ChatWidget: React.FC = () => {
                 variants={titleVariants}
                 className="mb-6"
             >
-                <Box className="flex items-center gap-4">
+                <Box className="flex items-center gap-4 blur-sm">
                     <motion.div
                         whileHover={{
                             scale: 1.1,
@@ -110,7 +110,7 @@ const ChatWidget: React.FC = () => {
                                 alt="Logo Claro"
                                 width={40}
                                 height={40}
-                                className="object-contain"
+                                className="object-contain blur-xs"
                             />
                         </motion.div>
                         <Typography variant="h6" className="text-white font-bold text-lg">
