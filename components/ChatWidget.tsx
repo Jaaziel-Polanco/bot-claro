@@ -1,14 +1,25 @@
+// File: components/ChatWidget.tsx
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paper, Box, TextField, IconButton, Typography, Button } from '@mui/material';
 import { Send } from 'lucide-react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
 import { useChatStore } from '../store/useChatStore';
 import IntentsModal from './IntentsModal';
+import { AmbiguityModal } from './AmbiguityModal';
 
 const ChatWidget: React.FC = () => {
-    const { messages, addMessage, selectIntent, getFilteredIntents, handleUserQuery } = useChatStore();
+    const {
+        messages,
+        addMessage,
+        selectIntent,
+        getFilteredIntents,
+        handleUserQuery,
+        openAmbiguityModal,
+    } = useChatStore();
+
     const [input, setInput] = useState<string>('');
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,7 +41,7 @@ const ChatWidget: React.FC = () => {
 
     const handleSend = async () => {
         if (input.trim() === '') return;
-        await handleUserQuery(input); // Usamos la función del store que maneja el reemplazo
+        await handleUserQuery(input);
         setInput('');
     };
 
@@ -43,49 +54,31 @@ const ChatWidget: React.FC = () => {
             transition: {
                 type: 'spring',
                 stiffness: 100,
-                damping: 20
-            }
-        }
+                damping: 20,
+            },
+        },
     };
 
     const messageVariants = {
         hidden: { opacity: 0, x: -20 },
         visible: { opacity: 1, x: 0 },
-        user: { opacity: 0, x: 20 }
+        user: { opacity: 0, x: 20 },
     };
 
     return (
         <div className="flex flex-col items-center">
-            {/* Título animado con gradiente */}
-            <motion.div
-                initial="initial"
-                animate="animate"
-                variants={titleVariants}
-                className="mb-6"
-            >
+            {/* Título animado */}
+            <motion.div initial="initial" animate="animate" variants={titleVariants} className="mb-6">
                 <Box className="flex items-center gap-4 blur-sm">
                     <motion.div
-                        whileHover={{
-                            scale: 1.1,
-                            rotate: [0, -5, 5, -5, 5, -5, 5, 0]
-                        }}
+                        whileHover={{ scale: 1.1, rotate: [0, -5, 5, -5, 5, -5, 5, 0] }}
                         transition={{ duration: 0.6 }}
                     >
-                        <Image
-                            src="/image.png"
-                            alt="Logo Claro"
-                            width={94}
-                            height={94}
-                            className="object-contain"
-                        />
+                        <Image src="/image.png" alt="Logo Claro" width={94} height={94} className="object-contain" />
                     </motion.div>
                     <div className="bg-gradient-to-r from-[#E60000] to-[#FF6B6B] bg-clip-text text-transparent">
-                        <Typography
-                            variant="h4"
-                            className="font-bold text-3xl mt-1"
-                        >
-                            Centro de Operaciones
-                            y Aprovisionamiento
+                        <Typography variant="h4" className="font-bold text-3xl mt-1">
+                            Centro de Operaciones y Aprovisionamiento
                         </Typography>
                     </div>
                 </Box>
@@ -98,20 +91,11 @@ const ChatWidget: React.FC = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl"
             >
-                {/* Header del Chat con animación de hover */}
+                {/* Header del Chat */}
                 <motion.div whileHover={{ scale: 1.02 }}>
                     <Box className="bg-gradient-to-r from-[#E60000] to-[#FF6B6B] p-4 flex items-center gap-2">
-                        <motion.div
-                            whileHover={{ rotate: 360 }}
-                            transition={{ duration: 0.6 }}
-                        >
-                            <Image
-                                src="/image.png"
-                                alt="Logo Claro"
-                                width={40}
-                                height={40}
-                                className="object-contain blur-xs"
-                            />
+                        <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>
+                            <Image src="/image.png" alt="Logo Claro" width={40} height={40} className="object-contain blur-xs" />
                         </motion.div>
                         <Typography variant="h6" className="text-white font-bold text-lg">
                             Asistente Virtual de Soporte
@@ -119,12 +103,11 @@ const ChatWidget: React.FC = () => {
                     </Box>
                 </motion.div>
 
-                {/* Área de mensajes con animación escalonada */}
+                {/* Área de mensajes */}
                 <Box className="p-4 h-80 overflow-y-auto bg-gray-50">
                     <AnimatePresence>
                         {messages.map((msg, index) => {
                             const isProcessing = msg.text === "Procesando..." && index === messages.length - 1;
-
                             return (
                                 <motion.div
                                     key={index}
@@ -142,7 +125,6 @@ const ChatWidget: React.FC = () => {
                                             : 'bg-white shadow-md'
                                             }`}
                                     >
-                                        {/* Solo muestra animación si es el último mensaje y está procesando */}
                                         {isProcessing ? (
                                             <motion.div
                                                 className="flex space-x-1"
@@ -154,9 +136,24 @@ const ChatWidget: React.FC = () => {
                                                 <div className="w-2 h-2 bg-current rounded-full" />
                                             </motion.div>
                                         ) : (
-                                            <Typography variant="body1" className="leading-relaxed">
-                                                {msg.text}
-                                            </Typography>
+                                            msg.type === 'bot' ? (
+                                                msg.text.startsWith("AMBIGUOUS:") ? (
+                                                    <div className="leading-relaxed">
+                                                        No estoy seguro de haber entendido correctamente. ¿Podrías seleccionar la opción que mejor se adapte a tu consulta?{" "}
+                                                        <Button variant="text" onClick={openAmbiguityModal}>
+                                                            Seleccionar opción
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="leading-relaxed">
+                                                        <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <Typography variant="body1" className="leading-relaxed">
+                                                    {msg.text}
+                                                </Typography>
+                                            )
                                         )}
                                     </motion.div>
                                 </motion.div>
@@ -166,15 +163,11 @@ const ChatWidget: React.FC = () => {
                     <div ref={messagesEndRef} />
                 </Box>
 
-                {/* Área de interacción con animaciones */}
+                {/* Área de interacción */}
                 <Box className="p-4 border-t border-gray-200 bg-white">
                     <motion.div layout className="mb-2 flex flex-wrap gap-2">
                         {intentsToShow.map((intent, idx) => (
-                            <motion.div
-                                key={idx}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
+                            <motion.div key={idx} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -186,10 +179,7 @@ const ChatWidget: React.FC = () => {
                             </motion.div>
                         ))}
                         {filteredIntents.length > 4 && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                            >
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                                 <Button
                                     variant="text"
                                     size="small"
@@ -221,10 +211,7 @@ const ChatWidget: React.FC = () => {
                             className="rounded-2xl"
                         />
 
-                        <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                             <IconButton
                                 color="primary"
                                 onClick={handleSend}
@@ -237,7 +224,7 @@ const ChatWidget: React.FC = () => {
                 </Box>
             </Paper>
 
-            {/* Modal con animación */}
+            {/* Modal para ver más opciones (Intents) */}
             <IntentsModal
                 open={modalOpen}
                 intents={filteredIntents}
@@ -247,6 +234,9 @@ const ChatWidget: React.FC = () => {
                 }}
                 onClose={() => setModalOpen(false)}
             />
+
+            {/* Modal de ambigüedad */}
+            <AmbiguityModal />
         </div>
     );
 };
